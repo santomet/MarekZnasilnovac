@@ -54,11 +54,9 @@ void MainWindow::getReady()
     }
 
     startTime = ui->timeEdit->time();
-
-    stopTime = startTime;
-    stopTime.addMSecs(ui->lastAfterMs->value());
+    stopTime = startTime.addMSecs(ui->lastAfterMs->value());
     //TODO need to use returned value
-    startTime.addMSecs(-(ui->earlyStartMs->value()));
+    startTime = startTime.addMSecs(-(ui->earlyStartMs->value()));
 
     startTimer.setInterval(1);
     startTimer.start();
