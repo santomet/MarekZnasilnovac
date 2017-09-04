@@ -7,6 +7,8 @@ RequestsModel::RequestsModel(QObject *parent)
 
 QVariant RequestsModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
+    Q_UNUSED(section)
+    Q_UNUSED(role)
     if(orientation == Qt::Horizontal)
         return "Requests";
     else
@@ -88,6 +90,7 @@ bool RequestsModel::insertRows(int row, int count, const QModelIndex &parent)
         mRequests.insert(row + i, "");
     }
     endInsertRows();
+    return true;
 }
 
 bool RequestsModel::removeRows(int row, int count, const QModelIndex &parent)
@@ -101,6 +104,7 @@ bool RequestsModel::removeRows(int row, int count, const QModelIndex &parent)
         mRequests.removeAt(row);
     }
     endRemoveRows();
+    return true;
 }
 
 QStringList RequestsModel::getRequests()
