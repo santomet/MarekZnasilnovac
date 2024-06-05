@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -30,8 +31,8 @@ void MainWindow::getReady()
     mNetworkRequests.clear();
     QNetworkCookieJar *cookieJar = new QNetworkCookieJar(this);
 
-    QNetworkCookie iscreds("iscreds", QByteArray::fromBase64(ui->iscredsLineEdit->text().toUtf8().toBase64()));
-    QNetworkCookie issession("issession", QByteArray::fromBase64(ui->issessionLineEdit->text().toUtf8().toBase64()));
+    QNetworkCookie iscreds("__Host-iscreds", QByteArray::fromBase64(ui->iscredsLineEdit->text().toUtf8().toBase64()));
+    QNetworkCookie issession("__Host-issession", QByteArray::fromBase64(ui->issessionLineEdit->text().toUtf8().toBase64()));
 
     iscreds.setDomain("is.muni.cz");
     issession.setDomain("is.muni.cz");
@@ -100,6 +101,60 @@ void MainWindow::stopEverything()
     mState = Resting;
 }
 
+void MainWindow::checkTime()
+{
+    QUdpSocket udpSocket;
+    QByteArray packet(48, 0);
+    packet[0] = 0x1B; //client mode
+
+    udpSocket.connectToHost("time.fi.muni.cz", 123);
+
+    QElapsedTimer elt;
+
+    QDateTime local;
+
+    if (udpSocket.waitForConnected()) {
+        local = QDateTime::currentDateTime();
+        elt.start();
+        udpSocket.write(packet);
+        if (udpSocket.waitForReadyRead(3000)) { // wait for response up to 3 seconds
+            int msPing = elt.elapsed();
+            QByteArray ntpResponse = udpSocket.readAll();
+
+            if (ntpResponse.size() == 48) {
+                QDataStream dataStream(ntpResponse);
+                dataStream.setByteOrder(QDataStream::BigEndian);
+
+                quint32 seconds;
+                quint32 fraction;
+                dataStream.skipRawData(40);
+                dataStream >> seconds >> fraction;
+
+                quint64 milliseconds = (seconds - 2208988800UL) * 1000 + (static_cast<quint64>(fraction) * 1000) / 0x100000000ULL;
+
+                // Convert to QDateTime
+                QDateTime currentTime = QDateTime::fromMSecsSinceEpoch(milliseconds, Qt::UTC).toLocalTime().addMSecs(- msPing/2);
+                int diff = local.msecsTo(currentTime);
+                qDebug() << "NTP Time:" << currentTime.toString() << "Local time" << local << "Difference" << diff << msPing;
+                QString message;
+                message.append("Results of time test:\ntime.fi.muni.cz:\t");
+                message.append(currentTime.toString());
+                message.append("\nLocal time:\t\t");
+                message.append(local.toString());
+                message.append("\nFI minus Local ms\t");
+                message.append(QString::number(diff));
+                message.append("\nPing ms:\t\t");
+                message.append(QString::number(msPing));
+                QMessageBox::information(this, "Time Test", message);
+            }
+        } else {
+            qWarning() << "No response from NTP server.";
+        }
+    } else {
+        qWarning() << "Could not connect to NTP server.";
+    }
+}
+
 void MainWindow::on_plusButton_clicked()
 {
     mModel.insertRow(mModel.rowCount());
@@ -126,3 +181,9 @@ void MainWindow::on_readyPushButton_clicked()
         break;
     }
 }
+
+void MainWindow::on_pushButton_clicked()
+{
+    checkTime();
+}
+

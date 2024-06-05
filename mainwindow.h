@@ -25,12 +25,16 @@ protected slots:
     void burst();
     void stopEverything();
 
+    void checkTime();
+
 private slots:
     void on_plusButton_clicked();
 
     void on_minusButton_clicked();
 
     void on_readyPushButton_clicked();
+
+    void on_pushButton_clicked();
 
 private:
     enum State {
